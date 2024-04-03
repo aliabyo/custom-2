@@ -1,8 +1,35 @@
 import random
 import time
-from highrise import BaseBot, Position, User, AnchorPosition, GetMessagesRequest
-import asyncio, random
-from highrise.__main__ import *
+import requests
+from highrise import BaseBot, Highrise, Position, AnchorPosition, Reaction
+from highrise import __main__
+from asyncio import run as arun
+from flask import Flask
+app = Flask(__name__)
+@app.route('/')
+def hello():
+    return "مرحباً بك في تشغيل البروجك لمدة 24 ساعة!"
+
+    app.run(host='0.0.0.0', port=8080)
+import asyncio
+from typing import Literal
+
+from random import choice
+import json
+from typing import List
+from datetime import datetime, timedelta
+from highrise.models import SessionMetadata
+import re
+from highrise.models import SessionMetadata,  GetMessagesRequest, User ,Item, Position, CurrencyItem, Reaction
+from typing import Any, Dict, Union
+import random
+import time
+from highrise import BaseBot, __main__, CurrencyItem, Item, Position, AnchorPosition, SessionMetadata, User
+from highrise.__main__ import BotDefinition
+from asyncio import run as arun
+from json import load, dump
+import asyncio
+import os
 from highrise import BaseBot, Highrise, Position, AnchorPosition, Reaction
 from highrise import __main__
 from asyncio import run as arun
@@ -83,61 +110,26 @@ from highrise.models import *
 from asyncio import Task
 from highrise.__main__ import *
 
-import asyncio
-import contextlib
-import random
-from typing import Any, Dict, Union
-from importlib.machinery import ModuleSpec
-from click.decorators import pass_context
-from highrise import BaseBot
-from typing import Any, Dict, Union
-from highrise import *
-from highrise.models import *
-from asyncio import Task
-from highrise.__main__ import *
-from highrise.models import (
-    AnchorPosition,
-    Item,
-    Position,
-    SessionMetadata,
-    User,
-)
-from highrise.models import (
-    CurrencyItem,
-    GetMessagesRequest,
-    Item,
-    SessionMetadata,
-)
-import random
-import requests
-import os
-import importlib
-import asyncio
-import contextlib
-import logging
-from highrise import BaseBot, AnchorPosition, Position, User, TaskGroup
 
-moderators = ['TOMY_X','MeroHR','mvash', 'NCV.K', 'DeadlyWaifu', 'Louiville', 'lissatrap', 'CoIIeen']
+
+dance_group = set()
+moderators = ["Louiville ", "lissatrap ", "HiddenName", "StaceyHR","ersp","1_on_1:63b9482fdddeaaf76ba0bf36:649dcc96cb84a5dc51a9b2f9", "1_on_1:62f1c519f065b0b3ce4ac789:660a0e77e035adbfae13c710","1_on_1:63b9482fdddeaaf76ba0bf36:660a0e77e035adbfae13c710"]
 
 class BotDefinition:
+    
+      
     def __init__(self, bot, room_id, api_token):
         self.bot = bot
         self.room_id = room_id
         self.api_token = api_token
-class ResponseError(Exception):
-  pass
+        self.following_username = None
 
 class Counter:
     bot_id = ""
     static_ctr = 0
-    usernames = ['TOMY_X','MeroHR','mvash', 'NCV.K', 'DeadlyWaifu', 'Louiville', 'lissatrap', 'CoIIeen']
+    usernames = ['ersp']
 
-class MyBot(BaseBot):
-
-    
-
-    
-
+class Bot(BaseBot):
     continuous_emote_tasks: Dict[int, asyncio.Task[Any]] = {}  
     user_data: Dict[int, Dict[str, Any]] = {}
     EMOTE_DICT = {
@@ -375,400 +367,222 @@ class MyBot(BaseBot):
       "Touch" : "dance-touch"
     }
     continuous_emote_task = None
-
-   # Define your available items list
+    
 
     def __init__(self):
-      super().__init__()
-      self.load_moderators()
-      self.load_temporary_vips()
-      self.maze_players = {}
-      self.user_points = {}  # Dictionary to store user points
+        super().__init__()
+        self.load_membership()
+        self.load_moderators()
+        self.load_fans()
+        self.load_temporary_vips()
+        self.following_username = None
+        self.maze_players = {}
+        self.user_points = {}  # Dictionary to store user points
 
-    
+      
 
 
     def load_temporary_vips(self):
-      try:
-          with open("temporary.json", "r") as file:
-              self.temporary_vips = json.load(file)
-      except FileNotFoundError:
-          self.temporary_vips = {}
+        try:
+            with open("temporary.json", "r") as file:
+                self.temporary_vips = json.load(file)
+        except FileNotFoundError:
+            self.temporary_vips = {}
 
     def save_temporary_vips(self):
-      with open("temporary.json", "w") as file:
-          json.dump(self.temporary_vips, file)
+        with open("temporary.json", "w") as file:
+            json.dump(self.temporary_vips, file)
 
     def load_moderators(self):
+        try:
+            with open("moderators.json", "r") as file:
+                self.moderators = json.load(file)
+        except FileNotFoundError:
+            self.moderators = []
+        default_moderators =['Louiville', "lissatrap ", "HiddenName", "StaceyHR", "ersp"]
+        # Add default moderators here
+        for mod in default_moderators:
+            if mod.lower() not in self.moderators:
+                self.moderators.append(mod.lower())
+    def load_fans(self):
       try:
-          with open("moderators.json", "r") as file:
-              self.moderators = json.load(file)
+          with open("fans.json", "r") as file:
+              self.fans = json.load(file)
       except FileNotFoundError:
-          self.moderators = []
+          self.fans = []
 
-      # Add default moderators here
-      default_moderators =['TOMY_X','MeroHR','mvash', 'NCV.K', 'Deadlywaifu', 'Louiville', 'lissatrap', 'CoIIeen']
-      for mod in default_moderators:
-          if mod.lower() not in self.moderators:
-              self.moderators.append(mod.lower())
+     
+    def load_membership(self):
+     try:
+        with open("membership.json", "r") as file:
+            self.membership = json.load(file)
+     except FileNotFoundError:
+        self.membership = []
+    def save_membership(self):
+     with open("membership.json", "w") as file:
+        json.dump(self.membership, file)
 
+  
     def save_moderators(self):
+
       with open("moderators.json", "w") as file:
-          json.dump(self.moderators, file)
+            json.dump(self.moderators, file)
 
+    def save_fans(self):
 
+      with open("fans.json", "w") as file:
+          json.dump(self.fans, file)
 
+    def init(self):
+        super().init()
+
+        self.Emotes = Emotes
+
+    async def on_emote(self, user: User ,emote_id : str , receiver: User | None )-> None:
+      print (f"{user.username} , {emote_id}")
 
     
+
+
+        
+        
+
+        
+
     
 
 
-    
 
 
-    
+    async def run(self, room_id, token):
+        definitions = [BotDefinition(self, room_id, token)]
+        await __main__.main(definitions) 
+
+    async def handle_order(self, user: User, message: str):
+      food_prices = {
+          "barleyTea": 5,
+          "rooibosTea": 3,
+          "jasminetea": 10,
+          "matcha": 20,
+          "hotcocoa": 5,
+          "espresso": 4,
+          "latte": 5,
+          "cold brew": 10,
+          "beer": 20,
+          "whiskey": 5,
+          "wine": 4,
+          "vodka": 5,
+
+      }
+      items = message.split()[1:]
+      items = [item for item in items if item != "and"]
+      total_price = 0
+      ordered_items = []
+      for item in items:
+          item_price = food_prices.get(item)
+          if item_price:
+              total_price += item_price
+              ordered_items.append(item)
+          else:
+              await self.highrise.chat(f"this is price {total_price}g you choose {item} {total_price} ")
 
 
+      if total_price > 0:
+          await self.highrise.chat(f"total price: {total_price}g")
+          await self.highrise.chat(f"wait to make {item} ")
+
+          await asyncio.sleep(5) 
+          await self.highrise.walk_to(Position(x=14.5, y=0.5, z=23.5, facing='FrontLeft'))
+          await asyncio.sleep(5) 
           
-    async def on_message(self, user_id: str, conversation_id: str, is_new_conversation: bool) -> None:
-      response = await self.highrise.get_messages(conversation_id)
-      message = "" 
-
-      response = await self.highrise.get_messages(conversation_id)
-      if isinstance(response, GetMessagesRequest.GetMessagesResponse):
-          message = response.messages[0].content
-      print (message)
-      if message == "You got a tip!":
-          await self.highrise.send_message(conversation_id, "tysm for tip i wish you enjoy in this party")
-      
-      if isinstance(response, GetMessagesRequest.GetMessagesResponse):
-          if response.messages:
-              message = response.messages[0].content
-              print(f"Received message: {message}")
-
-      if message:
-          print("Condition met: message is not empty")
-
-          if message.lower() == "hello":
-            print("Message is 'Hello', responding with commands...")
-
-            response = [
-      "HI! 🤗",
-      "Thankyou for messaging 💓",
-      "Type !help for more info..."
-    ]
-
-            for command in response:
-                  print(f"Sent command: {command}")
-                  await self.highrise.send_message(conversation_id, command)
-
-
-
+          await self.highrise.walk_to(Position(x=16.5, y=0.5, z=21.5, facing='FrontRight'))
+          await self.highrise.walk_to(Position(x=16.5, y=0.5, z=22.5, facing='FrontRight'))
+          await self.highrise.walk_to(Position(x=16.5, y=0.5, z=22.5, facing='FrontRight'))
+          await asyncio.sleep(4)
+          await self.highrise.walk_to(Position(x=14.5, y=0.5, z=23.5, facing='FrontLeft'))
+          await asyncio.sleep(7)
+          await self.highrise.chat(f"{item} done")
           
 
-          elif message.lower() == "emotelist":
-              print("Message is 'emotelist', responding with emotelist...")
-
-              emotelist = "Here is the emotelist...\n" \
-                      "angry, bow, casual, raisetheroof, charging, confusion, cursing, curtsy, cutey, dont, " \
-                      "emotecute, energyball, enthused, fashionista, flex, flirtywave, float, frog, gravedance, " \
-                      "gravity, greedy, hello, hot, icecream, kiss, kpop, lambi, laugh, letsgo, maniac, model, no, " \
-                      "ogdance, pennydance, pose1, pose2, pose3, pose4, pose5, punkguitar, russian, sad, savage, " \
-                      "shuffle, shy, singalong, sit, snowangel, snowball, swordfight, telekinesis, teleport, " \
-                      "thumbsup, tired, tummyache, viral, wave, weird, worm, yes, zombierun, airguitar, revelations, " \
-                      "creepy, creepycute, penguin, sleigh, hyped, jingle, nervous, gottago, repose, kawaii, scritchy, " \
-                      "skating "
-              await self.highrise.send_message(conversation_id, emotelist)
-
-          elif message.lower() == "!help":
-              print("Message is '!help', responding...")
-
-              commands = [
-              "Here is the list of commands...",
-              "list",
-              "Emotelist"
-              ]
+          await asyncio.sleep(7)
+          await self.highrise.chat(f"NEXT")
 
 
-              for command in commands:
-                  await self.highrise.send_message(conversation_id, command)
+      else:
+            await self.highrise.chat("not in menu.")
 
     async def on_user_move(self, user: User, pos: Position) -> None:
         
          if user.username == "TOMY_X":
            print(pos)
   
-    async def on_user_join(self, user: User, position: Union[Position, AnchorPosition]) -> None:
-      privileges = await self.highrise.get_room_privilege(user.id)
-      print(f"{user.username} joined the room with the privileges {privileges}")
+    async def on_reaction(self, user: User, reaction: Reaction, receiver: User) -> None:
+     try:
+      if user.username == "TOMY_X" :
+        if reaction == "heart":
+          await self.highrise.chat(f"{receiver.username} is now a Permanent VIP, given by {user.username}")
 
+          receiver_username = receiver.username.lower()
+          if receiver_username not in self.moderators:
+                self.moderators.append(receiver_username)
+                self.save_moderators()
+
+
+        if user.username == "TOMY_X" or user.username == "ersp" :
+          if reaction == "wink":
+              await self.highrise.chat(f"{receiver.username} is now a Temporary VIP, given by {user.username}")
+
+              receiver_username = receiver.username.lower()
+              if receiver_username not in self.temporary_vips:
+                    self.temporary_vips[receiver_username] = int(time.time()) + 24 * 60 * 60  # VIP for 24 hours
+                    self.save_temporary_vips()
+
+
+      if user.username in ["TOMY_X", "ersp"] and reaction == "clap":
+            await self.highrise.chat(f"{receiver.username} is remove from the commands by {user.username}")
+
+            receiver_username = receiver.username.lower()
+
+            # Remove user from moderators list
+            if receiver_username in self.moderators:
+                self.moderators.remove(receiver_username)
+                self.save_moderators()
+
+            # Add user to temporary VIPs list
+            if receiver_username not in self.temporary_vips:
+                self.temporary_vips[receiver_username] = int(time.time()) + 24 * 60 * 60  # VIP for 24 hours
+                self.save_temporary_vips()
+
+      if user.username in ["ersp"] and reaction == "wave":
+            await self.highrise.moderate_room(receiver.id, "kick")
+            await self.highrise.chat(f"{receiver.username} is Kicked by {user.username}")
+
+      if reaction =="thumbs"and user.username in moderators:
+         target_username = receiver.username
+         if target_username not in ["TOMY_X", "tomy_x"]:
+            await self.teleport_user_next_to(target_username, user)
+
+      if reaction =="thumbs"and user.username in moderators:
+         target_username = receiver.username
+         if target_username not in ["ersp", "ersp"]:
+            await self.teleport_user_next_to(target_username, user)
+
+      if reaction =="thumbs"and user.username in moderators:
+         target_username = receiver.username
+         if target_username not in moderators:
+            await self.teleport_user_next_to(target_username, user)
       
-      
-
-      await self.highrise.chat(f"Welcome! enjoy ")
-      
-# print(f"{user.username} joined the room standing at {position}")
-      await self.highrise.send_emote(
-        random.choice(['emoji-flex', 'dance-tiktok10', 'emote-snake', 'emote-roll', 'emote-superpunch', 'emote-kicking', 'idle-floorsleeping2', 'emote-hero', 'idle_layingdown2', 'idle_layingdown', 'dance-sexy', 'emoji-hadoken', 'emote-disappear', 'emote-graceful', 'sit-idle-cute', 'idle-loop-aerobics', 'dance-orangejustice', 'emote-rest', 'dance-martial-artist', 'dance-breakdance', 'emote-astronaut', 'emote-zombierun', 'idle_singing', 'emote- frollicking', 'emote-float', 'emote-kicking', 'emote-ninjarun', 'emote-secrethandshake', 'emote-apart', 'emote-headball', 'dance-floss', 'emote-jetpack', 'emote-ghost-idle', 'dance-spiritual', 'dance-robotic', 'dance-metal', 'idle-loop-tapdance', 'idle-dance-swinging', 'emote-mindblown', 'emote-gangnam', 'emote-harlemshake', 'emote-robot', 'emote-nightfever', 'dance-anime', 'idle-guitar', 'emote-headblowup', 'dance-creepypuppet', 'emote-creepycute', 'emote-sleigh', 'emote-hyped', 'dance-jinglebell', 'idle-nervous', 'idle-toilet', 'emote-timejump', 'sit-relaxed', 'dance-kawai', 'idle-wild', 'emote-iceskating', 'sit-open', 'dance-touch']))
-      await self.highrise.chat(f"\n{user.username} dm if you need help ")          
+     except Exception as e:
+            print(f"An exception occured: {e}")
 
 
 
-    async def on_tip(self, sender: User, receiver: User, tip: CurrencyItem | Item) -> None:
-      try:
-        if receiver.username == "MANNAT_WATCHMEN" and tip.amount >= 1:
-          await self.highrise.teleport(sender.id, Position(1, 0, 1, "FrontRight"))
-      except Exception as e:
-        print(f"An exception occurred: {e}")
-
-      if tip.amount <= 10:
-          print(f"[TIP] {sender.username} tipped {receiver.username} {tip.amount}g - Boooooooooo!!!!!! {sender.username} ")
-          tip_message = f" tysm for tip  ,{sender.username}"
-          await self.highrise.chat(f"{tip_message}")
-
-      elif tip.amount <= 100:
-          print(f"[TIP] {sender.username} tipped {receiver.username} {tip.amount}g - Cheapskate!!!{sender.username} ")
-          tip_message=f" tysm for 100 g {sender.username}"
-          await self.highrise.chat(f"{tip_message}")
-
-      elif tip.amount <= 500:
-          print(f"[TIP] {sender.username} tipped {receiver.username} {tip.amount}g - Good Grief!!!{sender.username} ")
-          tip_message = f" tysm for 500g ,{sender.username}"
-          await self.highrise.chat(f"{tip_message}") 
-
-      elif tip.amount <= 1000:
-          print(f"[TIP] {sender.username} tipped {receiver.username} {tip.amount}g - Dayummmmmmm{sender.username} ")
-          tip_message = f"tysm for 1000   ,{sender.username}"
-          await self.highrise.chat(f"{tip_message}")
-
-      elif tip.amount <= 5000:
-          print(f"[TIP] {sender.username} tipped {receiver.username} {tip.amount}g -  {sender.username} ")
-          tip_message = f" tysm for 5000,{sender.username}"
-          await self.highrise.chat(f"{tip_message}")
-
-      elif tip.amount >=10000:
-        print(f"[TIP ] {sender.username} tipped {tip.amount} - ohhhhhhhhhhh")
-        tip_message = [f"\n {sender.username} tipped {tip.amount} - ohhhhhhhhhh",
-           
-        ]
-        random_word = random.choice(tip_message)
-        await self.highrise.chat(f"{random_word}")
-
-    async def on_emote(self, user: User, emote_id: str, receiver: User | None) -> None:
-      print(f"{user.username} emoted: {emote_id}")
-
-    async def on_whisper(self, user: User, message: str) -> None:
-     print(f"{user.username} whispered: {message}")
-     if "$_top" in message.lower():
-        try:
-            await self.highrise.teleport(f"{user.id}", Position(9, 20, 5))
-        except Exception as e:
-            print("error 3:", e)
-     elif "$_middle" in message.lower():
-        try:
-            await self.highrise.teleport(f"{user.id}", Position(5, 15, 2))
-        except Exception as e:
-            print("error 3:", e)
-     elif "$_bottom" in message.lower():
-        try:
-            await self.highrise.teleport(f"{user.id}", Position(1, 0, 10))
-        except Exception as e:
-            print("error 3:", e)
-     elif "$_up" in message.lower():
-        try: 
-            await self.highrise.teleport(f"{user.id}", Position(15, 17 ,30))
-        except Exception as e:
-            print("error 3:", e)
-     elif "$_out" in message.lower():
-        try:
-            await self.highrise.teleport(f"{user.id}", Position(15, 0, 23.5))
-        except Exception as e:
-            print("error 3:", e)
-     elif "$_door" in message.lower():
-        try: 
-            await self.highrise.teleport(f"{user.id}", Position(18, 0 ,8))
-        except Exception as e:
-            print("error 3:", e)
-     elif "$_get" in message.lower():
-        try:
-            await self.highrise.teleport(f"{user.id}", Position(-5, 0, 3))
-        except Exception as e:
-            print("error 3:", e)
-     elif "$_end" in message.lower():
-        try: 
-            await self.highrise.teleport(f"{user.id}", Position(-5, 0 ,18.5))
-        except Exception as e:
-            print("error 3:", e)
-     elif "$_center" in message.lower():
-        try:
-            await self.highrise.teleport(f"{user.id}", Position(10.5, 0, 10.5))
-        except Exception as e:
-            print("error 3:", e)
-     elif "$_stair" in message.lower():
-        try: 
-            await self.highrise.teleport(f"{user.id}", Position(13.5, 9 ,9.5))
-        except Exception as e:
-            print("error 3:", e)
-     elif "$_air" in message.lower():
-        try: 
-            await self.highrise.teleport(f"{user.id}", Position(3, 9 ,10.5))
-        except Exception as e:
-            print("error 3:", e)
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-    
-      
-
-
-   
-
-    async def on_user_leave(self, user: User) -> None:
-        try:
-        # Your existing code
-            await self.stop_continuous_emote(user.id)
-        except highrise.ResponseError as e:
-        # Handle the error
-            print(f"An error occurred while stopping continuous emote: {str(e)}")
-        # Other error handling logic
-
-        print(f"{user.username} Left the Room")
-        joke = random.choice([f"Goodbye @{user.username} see you soon cutie! 💕✨",f"Goodbye @{user.username} come back again cutie! 💕✨"])
-        await self.highrise.chat(f"{joke}")
-        await self.highrise.send_emote("emote-bow")
-        
-    async def delayed_message_command(self, message, command):
-        # Implementation of delayed_message_command goes here
-        pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-    async def equip(self: BaseBot, user: User, message: str):
-        #gets the item id and category from the message
-            parts = message.split(" ")
-            if len(parts) < 2:
-                await self.highrise.chat("You need to specify the item name.")
-                return
-            item_name = ""
-            for part in parts[1:]:
-                item_name += part + " "
-            item_name = item_name[:-1]
-        #check if the last part of the message is a number
-            index = 0
-            if item_name[-1].isdigit():
-                item_name = item_name[:-2]
-                index = int(parts[-1])
-            item = (await self.webapi.get_items(item_name = item_name)).items
-        #checks if the response is valid
-            if item == []:
-                await self.highrise.chat(f"Item '{item_name}' not found.")
-                return
-            elif len(item) > 1:
-                await self.highrise.chat(f"Multiple items found for '{item_name}', using the item number {index} in the list {item[index].item_name}.")
-            item = item[index]
-            item_id = item.item_id
-            category = item.category
-        #--------------------------------------------------------#
-
-            verification = False
-        #checks if the bot has the item
-            inventory = (await self.highrise.get_inventory()).items
-            for inventory_item in inventory:
-                if inventory_item.id == item_id:
-                    verification = True
-                    break
-            if verification == False:
-            #checks if the item is free
-                if item.rarity == Rarity.NONE:
-                    pass
-            #checks if the item is purchasable
-                elif item.is_purchasable == False:
-                    await self.highrise.chat(f"Item '{item_name}' can't be purchased.")
-                    return
-                else:
-                    try:
-                        response = await self.highrise.buy_item(item_id)
-                        if response != "success":
-                            await self.highrise.chat(f"Item '{item_name}' can't be purchased.")
-                            return
-                        else:
-                            await self.highrise.chat(f"Item '{item_name}' purchased.")
-                    except Exception as e:
-                        print(e)
-                        await self.highrise.chat(f"Exception: {e}'.")
-                        return
-
-        #--------------------------------------------------------#
-            new_item = Item(type = "clothing",
-                        amount = 1,
-                        id = item_id, 
-                        account_bound=False,
-                        active_palette=0,)
-        #--------------------------------------------------------#
-        #checks if the item category is already in use
-            outfit = (await self.highrise.get_my_outfit()).outfit
-            items_to_remove = []
-            for outfit_item in outfit:
-            #the category of the item in an outfit can be found by the first string in the id before the "-" character
-                item_category = outfit_item.id.split("-")[0][0:4]
-                print(f"{item_category}")
-                if item_category == category[0:4]:
-                    items_to_remove.append(outfit_item)
-            for item_to_remove in items_to_remove:
-                outfit.remove(item_to_remove)
-        #if the item is a hair, also equips the hair_back
-            if category == "hair_front":
-                hair_back_id = item.link_ids[0]
-                hair_back = Item(type = "clothing",
-                                amount = 1,
-                                id = hair_back_id, 
-                                account_bound=False,
-                                active_palette=0,)
-                outfit.append(hair_back)
-            outfit.append(new_item)
-            await self.highrise.set_outfit(outfit)
-
-    async def buy_item(self, item_id):
-        # Check if item_id is valid
-        if item_id in outfit:
-            # Implement purchase logic here, for example, print a message
-            return f"Successfully bought: {outfit[item_id]['item_name']}"
-        else:
-            # If item_id is not valid, raise an exception
-            raise ValueError("Invalid item_id")
-
-
-
-
-
-
-
-
-
-
+    def remaining_time(self, username):
+        if username in self.temporary_vips:
+            remaining_seconds = self.temporary_vips[username] - int(time.time())
+            if remaining_seconds > 0:
+                return str(timedelta(seconds=remaining_seconds))
+        return "Not a temporary VIP."
 
 
     async def teleport_user_next_to(self, target_username: str, requester_user: User):
@@ -789,11 +603,8 @@ class MyBot(BaseBot):
               "position": Position(requester_position.x, requester_position.y, new_z, requester_position.facing)
             }
             await self.highrise.teleport(user_dict["id"], user_dict["position"])
-      
 
-   
-
-
+    
     async def on_chat(self, user: User, message: str) -> None:
         print(f"{user.username}:{message}")
         if message in self.EMOTE_DICT:
@@ -816,21 +627,26 @@ class MyBot(BaseBot):
                 task = asyncio.create_task(self.send_continuous_emote(emote_id, user.id,delay))
                 self.continuous_emote_tasks[user.id] = task
 
-        if message.lower().startswith("/getitem"):
-          outfit_response = await self.highrise.get_my_outfit()
-          fifth_item = outfit_response.outfit[4].id
-          item_response = await self.webapi.get_item(item_id=fifth_item)
-          print (item_response)
+        elif message.startswith("!stop"):
+            if user.id in self.continuous_emote_tasks and not self.continuous_emote_tasks[user.id].cancelled():
+                await self.stop_continuous_emote(user.id)
 
-        if message.startswith("-heart all"):
-          if user.username.lower() in self.moderators:
-            roomUsers = (await self.highrise.get_room_users()).content
-            for roomUser, _ in roomUsers:
-               await self.highrise.react("heart", roomUser.id)
-       
-#tip 5
+                await self.highrise.chat("Continuous emote has been stopped.")
+            else:
+                await self.highrise.chat("You don't have an active loop_emote.")
 
+
+        if message.startswith("!menu"):
+          food_menu = (
+              f"\nMenu :\n -barleytea \n -rooibostea \n -Jasminetea \n -matcha \n -hotcocoa \n -espresso \n -latte \n -coldbrew \n -beer \n -whiskey \n -wine \n -vodka \n Enjoy{user.username}"
+
+          )
+          await self.highrise.chat(food_menu)
        
+        if message.startswith("!order"):
+          await self.handle_order(user, message)
+          
+      
         if message == ("/tip 2 5g") and user.username in moderators:
           roomUsers = (await self.highrise.get_room_users()).content
         # Shuffle the list to ensure randomness
@@ -1143,17 +959,27 @@ class MyBot(BaseBot):
               await self.highrise.tip_user(roomUser.id, "gold_bar_1")
               await self.highrise.chat(f"Tipped {roomUser.username} 1 gold.")
 
+
+        if message == ("/tip 20 1g") and user.username in moderators:
+          roomUsers = (await self.highrise.get_room_users()).content
+        # Shuffle the list to ensure randomness
+          random.shuffle(roomUsers)
+        # Select the first three users
+          selected_users = roomUsers[:20]
+          for roomUser, _ in selected_users:
+              await self.highrise.tip_user(roomUser.id, "gold_bar_1")
+              await self.highrise.chat(f"Tipped {roomUser.username} 1 gold.")
+
         if message.startswith("!tip ") and user.username in moderators:
           try:
-              await self.highrise.chat(f"𝔫𝔬𝔴 𝔞𝔩𝔩 𝔤𝔢𝔱 𝔱𝔦𝔭 𝔣𝔯𝔬𝔪 @{user.username}")
               tip_amount = int(message.split(" ")[1])
           except IndexError:
-              await self.highrise.chat("plz add how much you want to tip all")
+              await self.highrise.chat("can you write the right.")
               return
           except ValueError:
-              await self.highrise.chat("CAN YOU WRITE THE RIGHT COMMAND !tip amount")
+              await self.highrise.chat("can you wtite the right command !tip amount.")
               return
-          if user.username in ['TOMY_X','MeroHR','mvash', 'NCV.K', 'DeadlyWaifu', 'Louiville', 'lissatrap', 'CoIIeen']:
+          if user.username in ["Louiville ", "lissatrap ", "HiddenName", "StaceyHR"]:
               response = await self.highrise.get_room_users()
               num_users = len(response.content)
               total_gold = tip_amount * num_users
@@ -1167,19 +993,10 @@ class MyBot(BaseBot):
                       await self.highrise.tip_user(user_id, f"gold_bar_{tip_amount}")
               else:
                   await self.highrise.chat("send gold to send tips")
-      
-
-        if message == ("/tip 20 1g") and user.username in moderators:
-          roomUsers = (await self.highrise.get_room_users()).content
-        # Shuffle the list to ensure randomness
-          random.shuffle(roomUsers)
-        # Select the first three users
-          selected_users = roomUsers[:20]
-          for roomUser, _ in selected_users:
-              await self.highrise.tip_user(roomUser.id, "gold_bar_1")
-              await self.highrise.chat(f"Tipped {roomUser.username} 1 gold.")
+    
 
         
+         
 
         if message.startswith("!kick"):
           if user.username.lower() in self.moderators:
@@ -1275,20 +1092,7 @@ class MyBot(BaseBot):
 
 
 
-      
-        if message.startswith("!time"):
-          parts = message.split()
-          if len(parts) == 2:
-              target_mention = parts[1]
-
-              # Remove the "@" symbol if present
-              target_user = target_mention.lstrip('@')
-
-              # Check if the target user has temporary VIP status
-              remaining_time = self.remaining_time(target_user.lower())
-              await self.highrise.send_whisper(user.id, f"Remaining time for {target_mention}'s temporary VIP status: {remaining_time}")
-          else:
-              await self.highrise.send_whisper(user.id, "Usage: !time @username")
+        
 
 
         if message.startswith("react"):
@@ -1298,182 +1102,24 @@ class MyBot(BaseBot):
             response = await self.highrise.get_my_outfit()
             for item in response.outfit:
                 await self.highrise.chat(item.id)
-        
-
-
+          
 
         
 
-       
-        if message.startswith("move"):
-            room_dictionary = {"room_1": "65ba7ed30a21dae041d20eec",
-                       "room_2": "<>",}
-            if user.username != "Mr.jawaan":
-                await self.highrise.chat("Aapko is command ka istemal karne ki anumati nahi hai.")
-                return
-            parts = message.split()
-            if len(parts) != 3:
-                await self.highrise.chat("Invalid move command format.")
-                return
-            command, username, room = parts
-            if "@" in username:
-                username = username[1:]
-            if room not in room_dictionary:
-                await self.highrise.chat("Invalid room, please specify a valid room.")
-                return
-    # check if user is in room
-            room_users = (await self.highrise.get_room_users()).content
-            for room_user, pos in room_users:
-                if room_user.username.lower() == username.lower():
-                    user_id = room_user.id
-                    break
-            if "user_id" not in locals():
-                await self.highrise.chat("User nahi mila, kripya sahi user aur room specify karein.")
-                return
-    # move user
-            try:
-                await self.highrise.move_user_to_room(user_id, room_dictionary[room])
-            except Exception as e:
-                await self.highrise.chat(f"Error: {e}")
-                return
-
-
         
 
+        
         if message.startswith("!help"):
-                help_message = (
-                    "Available Commands:\n"
-                    "\commands you can use:\n \nemotelist  \n sayso @username\n fight @username\n uwu @username\n Example: fight @tomy_x"
-                    
-                    
-                    # ... (other commands)
-                )
+          help_message = (f"\commands you can use: \nemotelist \n sayso @username\n fight @username\n uwu @username\n Example: fight @tomy_x \n Rizz \n  \n joke \n Lovepercentage \n Hatepercentage \n Straightmeter \n \nwrite hoin to make bot send to you all news and events \n Loop emote \n !stop for stop loop emote \n number emotes 2....no end \n write !menu to get menu drinks \n !order drink to order \n also you can use this !order drink and drink")
 
-                # Chunk the message to avoid exceeding message length limits
-                chunk_size = 250
-                for i in range(0, len(help_message), chunk_size):
-                    chunk = help_message[i : i + chunk_size]
-                    await self.highrise.send_whisper(user.id, chunk)
-
-        if message.startswith("!floor2"):
-           if user.username.lower() in self.moderators or user.username.lower() in self.temporary_vips:
-              split = message.split()
-              if len(split) == 2:
-                  name = split[1].lower()
-                  response = await self.highrise.get_room_users()
-                  users = [content[0] for content in response.content]
-                  try:
-                      for u in users:
-                          u_give = str("@") + str((u.username).lower())
-                          if str((u_give).lower()).strip() == str(name).strip():
-                              await self.highrise.teleport(u.id,Position(x=9.5, y=8.0, z=0.5, facing='BackLeft')) 
-                              break
-                  except:
-                      pass
-              else:
-                  await self.highrise.teleport(user.id,Position(x=9.5, y=8.0, z=0.5, facing='BackLeft'))
-
-        if message.startswith("!floor3"):
-           if user.username.lower() in self.moderators or user.username.lower() in self.temporary_vips:
-              split = message.split()
-              if len(split) == 2:
-                  name = split[1].lower()
-                  response = await self.highrise.get_room_users()
-                  users = [content[0] for content in response.content]
-                  try:
-                      for u in users:
-                          u_give = str("@") + str((u.username).lower())
-                          if str((u_give).lower()).strip() == str(name).strip():
-                              await self.highrise.teleport(u.id,Position(x=17.5, y=16.25, z=15.5, facing='FrontRight')) 
-                              break
-                  except:
-                      pass
-              else:
-                  await self.highrise.teleport(user.id,Position(x=17.5, y=16.25, z=15.5, facing='FrontRight'))
+          # Chunk the message to avoid exceeding message length limits
+          chunk_size = 250
+          for i in range(0, len(help_message), chunk_size):
+              chunk = help_message[i : i + chunk_size]
+              await self.highrise.send_whisper(user.id, chunk)
 
         
-
-        if message.startswith("!floor1"):
-           if user.username.lower() in self.moderators or user.username.lower() in self.temporary_vips:
-              split = message.split()
-              if len(split) == 2:
-                  name = split[1].lower()
-                  response = await self.highrise.get_room_users()
-                  users = [content[0] for content in response.content]
-                  try:
-                      for u in users:
-                          u_give = str("@") + str((u.username).lower())
-                          if str((u_give).lower()).strip() == str(name).strip():
-                              await self.highrise.teleport(u.id,Position(x=3.0, y=0.0, z=17.5, facing='FrontLeft')) 
-                              break
-                  except:
-                      pass
-              else:
-                  await self.highrise.teleport(user.id,Position(x=3.0, y=0.0, z=17.5, facing='FrontLeft'))
-
-        if message.startswith("!mod"):
-           if user.username.lower() in self.moderators or user.username.lower() in self.temporary_vips:
-              split = message.split()
-              if len(split) == 2:
-                  name = split[1].lower()
-                  response = await self.highrise.get_room_users()
-                  users = [content[0] for content in response.content]
-                  try:
-                      for u in users:
-                          u_give = str("@") + str((u.username).lower())
-                          if str((u_give).lower()).strip() == str(name).strip():
-                              await self.highrise.teleport(u.id,Position(x=12.5, y=17.25, z=0.5, facing='FrontRight')) 
-                              break
-                  except:
-                      pass
-              else:
-                  await self.highrise.teleport(user.id,Position(x=12.5, y=17.25, z=0.5, facing='FrontRight'))
-                  
-        
-
-        if "/hi" in message or "/hello" in message :
-              try:
-                  await self.highrise.chat( "hello, how are you?")
-              except:
-                print("error 3")
-
-        if "/how are you" in message or "/wby" in message :
-              try:
-                  await self.highrise.chat( "I am fine, thank you")
-              except:
-                print("error 3")
-
-        if "/fine" in message or "/good" in message :
-              try:
-                  await self.highrise.chat( "Great to hear that")
-              except:
-                print("error 3")
-
-        if "/what is your name" in message or "/name" in message :
-          try:
-              await self.highrise.chat( "I dont have name but you can call me MINE😍")
-          except:
-            print("error 3")
-
-        if "/I love you" in message or "/ily" in message :
-              try:
-                  await self.highrise.chat( "I love you too❤️")
-              except:
-                print("error 3")
-
-        if "/I hate you" in message or "/ihy" in message :
-              try:
-                  await self.highrise.chat( "Still Love you❤️")
-              except:
-                print("error 3")
-
-        if "/will you marry me" in message or "/wyme" in message :
-              try:
-                  await self.highrise.chat( "I am a bot, but i will marry you🌝❤️")
-              except:
-                print("error 3")
-
-
+ 
 
 
         if message.lower().startswith("/item "):
@@ -1492,7 +1138,7 @@ class MyBot(BaseBot):
             except Exception as e:
                 await self.highrise.chat(f"Error: {e}")
 
-        if message.startswith("!vip"):
+        if message.startswith("!down"):
            if user.username.lower() in self.moderators or user.username.lower() in self.temporary_vips:
               split = message.split()
               if len(split) == 2:
@@ -1503,12 +1149,52 @@ class MyBot(BaseBot):
                       for u in users:
                           u_give = str("@") + str((u.username).lower())
                           if str((u_give).lower()).strip() == str(name).strip():
-                              await self.highrise.teleport(u.id,Position(x=16.5, y=15.5, z=29.5, facing='FrontRight')) 
+                              await self.highrise.teleport(u.id,Position(x=17.5, y=0.6000000238418579, z=13.5, facing='FrontRight')) 
                               break
                   except:
                       pass
               else:
-                  await self.highrise.teleport(user.id,Position(x=16.5, y=15.5, z=29.5, facing='FrontRight'))
+                  await self.highrise.teleport(user.id,Position(x=17.5, y=0.6000000238418579, z=13.5, facing='FrontRight'))
+
+
+        if message.startswith("!floor2"):
+           if user.username.lower() in self.moderators or user.username.lower() in self.temporary_vips:
+              split = message.split()
+              if len(split) == 2:
+                  name = split[1].lower()
+                  response = await self.highrise.get_room_users()
+                  users = [content[0] for content in response.content]
+                  try:
+                      for u in users:
+                          u_give = str("@") + str((u.username).lower())
+                          if str((u_give).lower()).strip() == str(name).strip():
+                              await self.highrise.teleport(u.id,Position(x=8.5, y=8.0, z=1.5, facing='FrontRight')) 
+                              break
+                  except:
+                      pass
+              else:
+                  await self.highrise.teleport(user.id,Position(x=8.5, y=8.0, z=1.5, facing='FrontRight'))
+
+
+        if message.startswith("!floor3"):
+           if user.username.lower() in self.moderators or user.username.lower() in self.temporary_vips:
+              split = message.split()
+              if len(split) == 2:
+                  name = split[1].lower()
+                  response = await self.highrise.get_room_users()
+                  users = [content[0] for content in response.content]
+                  try:
+                      for u in users:
+                          u_give = str("@") + str((u.username).lower())
+                          if str((u_give).lower()).strip() == str(name).strip():
+                              await self.highrise.teleport(u.id,Position(x=16.5, y=16.099998474121094, z=1.5, facing='BackRight')) 
+                              break
+                  except:
+                      pass
+              else:
+                  await self.highrise.teleport(user.id,Position(x=16.5, y=16.099998474121094, z=1.5, facing='BackRight'))
+
+      
 
       
         
@@ -1604,13 +1290,6 @@ class MyBot(BaseBot):
             await self.highrise.send_whisper(user.id,"\nfashionista,\ngravedance,\ngravity,\nicecream,\npunkguitar,\nsayso,\nuwu,\nzombierun,\nPenguin,\nCreepycute,\nCreepy,\nAirguitar,\nanime")
             await self.highrise.send_whisper(user.id,"\nNEW EMOTES💓\nsleigh,\nhyped, \njingle, \nnervous, \ngottago, \ntimeJump ,\nrepose, \nkawaii, \nscritchy,\nskating, \ntouch \n-\n MORE COMING SOON") 
 
-
-
-
-        
-
-
-
         if "Poeticrizz" in message or "poeticrizz" in message:
             poeticrizz = random.choice(["If you carried medusa’s curse, i would stare into your eyes so that my stone would gaze at your beauty for all eternity.", "If every star were a memory, i’d spend an eternity counting them all, just to relieve the moments I’ve spent with you","As the sun comes up, you have no shadow, because there’s nothing that can replicate your beauty","When i can’t be with you, i read your favorite book, listen to your favorite song, watch your favorite movie, because in them i find little bits of you" , "My darkest days are shifted with a slight gaze of your fascinating looks. Your beautiful dark eyes are the last fiber holding my shattered heart." ,"If I could weave a tapestry of our love, it would be a kaleidoscope of colors, each hue a testament to the depth of our affection." , "Your presence is like a sunrise, a radiant glow that banishes the darkness and fills my world with light." , "If I could sail the seas of time, I’d chart a course to the moment we first met, the instant our hearts became entwined.", "Your love is the anchor that holds me steady, a steadfast bond that keeps me grounded and secure.","If I could gather the sands of the desert, I’d create a monument to your beauty, a testament to your enchanting allure.","Your voice is the siren’s call, a mesmerizing melody that lures me into the depths of your love." , "If you’re the moon, i am the tide, for i flow under your command, forever longing for you, as you are my purpose.","If i had to wait my entire life for your love, I would. For when i have withered away, i’d be glad i got to experience heaven before i reached it.","For every star in the sky that went out, i would never know for you outshined them always.","If you were a grain of sand, I’d search every beach and desert looking for you and your beauty no matter how long i’d have to look. ","If you’re the angel of death, I’d be willing to die a million times just to see your beauty." , "If i was blinded the moment i lay my eyes on you, I would not grieve, for in that instance, i truly gazed upon perfection. " , "You are the sun to my sunflower, i will always be glancing at your gorgeous light as i follow you around amidst the bright morning." , "If i were dared to shout to the world how much i love you, i would simply whisper it in your ears." , "Your love is the beacon that guides me through the darkest storms, a lighthouse illuminating my heart’s shore.","If your heart were a canvas, I’d paint it with the colors of a thousand sunsets, each hue a testament to my love for you. " , "Like a rose in full bloom, your beauty captivates me, leaving me breathless and longing for your tender embrace. ","If i had to wait my entire life for your love, i would. When i’ve withered away, I’d be glad i got to experience heaven before i reached it.","If i had a flower for every time i thought of you, I’d have one, because not once have i stopped thinking about the perfection that you are.","If I could rearrange the cosmos, I would replace the sun with you for your beauty shines brighter than any star ever will my dear","The stars were so jealous of how bright you were, they had to make the sun fall just to be seen, yet you outshined them everytime.","Even if i learned every language, i couldn’t find the words to describe how beautiful you are.","Your laughter is the melody that dances through my soul, a symphony of joy that fills the chambers of my heart.","If our love were a river, it would flow endlessly, carving a path through the mountains of time, unstoppable and eternal.","Your eyes are the windows to a world of wonder, a universe of endless possibilities that I long to explore.","If I were a poet, I’d pen a thousand sonnets, each line a tribute to the enchanting spell you’ve cast upon me.","Your touch is like a gentle breeze, caressing my skin and awakening my senses, a testament to the power of your love.","In the garden of my heart, you are the most exquisite flower, a rare and precious bloom that I will cherish forever.","Your love is the compass that guides me, a true north that leads me to the shores of happiness and contentment.","If I could capture the essence of your beauty, I’d bottle it and wear it as a perfume, a fragrant reminder of your enchanting presence.","Your voice is the sweetest lullaby, a soothing balm that calms the tempest of my soul and lulls me into a state of blissful serenity.","If our love were a tapestry, it would be woven with threads of gold and silver, a masterpiece of passion and devotion.","Your smile is the sun that breaks through the clouds, a radiant beam of light that warms my heart and brightens my day.","If I were a sculptor, I’d chisel your likeness in marble, a timeless tribute to the beauty that has captured my heart.","Your love is the key that unlocks the treasure chest of my heart, revealing a bounty of affection and adoration.","Like a butterfly emerging from its cocoon, your love has transformed me, awakening a newfound sense of wonder and joy.","If I could pluck the stars from the sky, I’d arrange them in a constellation that spells your name, a celestial tribute to your radiant beauty.","Your presence is like a warm embrace on a cold winter’s night, a comforting haven that shelters me from the chill of loneliness.","If our love were a symphony, it would be a crescendo of passion and emotion, a masterpiece that resonates through the ages.","Your eyes are like twin galaxies, swirling with the mysteries of the universe, drawing me into their celestial embrace.","If I could harness the power of the wind, I’d send a gentle breeze to whisper my love for you in your ear.","Your love is the flame that ignites my soul, a burning passion that consumes me and sets my heart ablaze.","If I were a painter, I’d create a masterpiece with your beauty as my muse, a portrait of perfection that captures your essence.","Your touch is like a summer rain, a gentle caress that quenches my thirst and soothes my parched heart.","If our love were a dance, it would be a waltz of passion and grace, a timeless expression of our devotion to one another.","Your laughter is the song of angels, a heavenly chorus that lifts my spirits and fills my heart with joy.","If I could pluck the petals of a thousand roses, I’d create a path for you to walk upon, a fragrant tribute to your captivating charm.","Your touch is like a silken caress, a tender embrace that envelops me in a cocoon of warmth and affection.","If our love were a garden, it would be a paradise of vibrant blooms, a sanctuary of peace and tranquility.","Your smile is the rainbow that appears after the storm, a brilliant arc of color that brightens my world.","If I could write a novel, it would be an epic tale of our love, a timeless story of passion and devotion.","Your eyes are the mirrors of my soul, reflecting the depth of my love and the intensity of my desire.","If I could traverse the heavens, I’d pluck the most radiant star and present it to you as a token of my undying love.","Your love is the elixir that breathes life into my weary soul, a potion of passion that rejuvenates my heart.","If I could traverse the depths of the ocean, I’d collect the rarest pearls to adorn you, a symbol of the precious treasure you are to me.","Your embrace is like a warm blanket on a frosty night, enveloping me in a cocoon of comfort and affection.","If our love were a melody, it would be a sultry jazz tune, a seductive dance of passion and desire.","Your eyes sparkle like the finest champagne, intoxicating me with their effervescent allure.","If I could command the elements, I’d summon a gentle rain to caress your skin, each droplet a tender kiss from the heavens.","Your laughter is the chime of windchimes, a delicate symphony that fills the air with enchantment and delight.","If I could weave a spell, I’d conjure a magical realm where we could dance among the stars, our love transcending time and space.","Your touch is like the brush of a master artist, painting my heart with the vibrant hues of passion and desire.","If our love were a flame, it would burn with the intensity of a thousand suns, an inferno of devotion that consumes us both.","Your lips are like the petals of a delicate rose, their softness beckoning me to taste their sweet nectar.","If I could harness the power of the moon, I’d bathe you in its silvery glow, illuminating your ethereal beauty.","Your presence is like the first light of dawn, a radiant beam that dispels the shadows and fills my world with hope.","If I could write a love letter to the universe, I’d pen an ode to your enchanting allure, a testament to the spell you’ve cast upon me.","Your voice is the whisper of the wind, a gentle caress that stirs my soul and awakens my deepest desires.","If our love were a garden, it would be a lush oasis, a sanctuary of passion and pleasure where we could lose ourselves in each other’s embrace.","Your smile is the shimmer of sunlight on water, a dazzling display that captivates me and leaves me breathless.","If I could compose a symphony, I’d dedicate each note to the rhythm of your heartbeat, a musical tribute to our love’s harmony.","If I had a dollar for every mistake you did, I would have only one, because your entire life is a continuous mistake","The sun shines upon your beautiful face from dusk till dawn, but my love outshines the sun from dusk till dawn and far beyond that"])
             await self.highrise.chat(f": {user.username} - {poeticrizz}")
@@ -1624,13 +1303,9 @@ class MyBot(BaseBot):
             await self.highrise.chat(f": {user.username} - {joke}")
 
         if "Funfact" in message or "funfact" in message:
-            funfact = random.choice(["Honey never spoils. Archaeologists have found edible honey in ancient Egyptian tombs over 3,000 years old.","Bananas are berries, while strawberries are not technically berries but aggregate fruits.","The Eiffel Tower can grow up to 6 inches taller during the summer due to thermal expansion.","दोस्तों क्या आप जानते हैं कि, भारतीय महिलाओं के पास पूरी दुनिया का तकरीबन 11% सोना है जो कि किसी ओर देश की महिलाओं के पास नहीं।","Humans and giraffes have the same number of neck vertebrae—seven.","Octopuses have three hearts.","The shortest war in history was between Britain and Zanzibar on August 27, 1896. It lasted just 38 minutes.","The Great Wall of China is not visible from space with the naked eye.","The Hawaiian alphabet has only 12 letters: A, E, I, O, U, H, K, L, M, N, P, and W.","A group of flamingos is called a 'flamboyance.'","The tongue is the only muscle in the human body that is attached at only one end.","The average person will spend six months of their life waiting for red lights to turn green.","A group of crows is called a 'murder.'","The world's oldest known recipe is for beer and dates back over 4,000 years.","A day on Venus is longer than a year on Venus. It takes about 243 Earth days for Venus to complete one rotation but only 225 Earth days to orbit the Sun.","दोस्तों क्या आप जानते हैं कि, प्लास्टिक सर्जरी की खोज सबसे पहले भारत में ही हुई थी।","The shortest war in history was between Britain and Zanzibar on August 27, 1896. It lasted just 38 minutes.","The word 'nerd' was first coined by Dr. Seuss in his book 'If I Ran the Zoo.'","The unicorn is the national animal of Scotland.","The average person will walk the equivalent of three times around the world in their lifetime.","Cows have best friends and get stressed when they are separated.","The longest time between two twins being born is 87 days.","Astronauts cannot burp in space due to the absence of gravity.","A hummingbird weighs less than a penny.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Some people can unfocus their eyesight (or make their eyesight blurry) on command","Making fun of a short girls height is indirectly telling her that you are in love with her ??","No matter how wrong she is, if she is short, forgive her. She is just a baby","If you see my typing for to long, just gimme time cuz I'm either tryna find a emoji or spell a word correctly.","you know your friendship elite if it started with 'when I first met you i didn't like you' ","Life is too short to argue just blame your sister for everything and move on","If you are dead inside, go outside ","If she has strict parents,back problems,stays on her phone all day,and gets mad and jealous over the little things and she's 5'0-5'6ft ,Wife her asap","Girls will never admit they like u lol either they text u all day, call you sir or bro, or post stuff on their story hoping you'll slide up","Never trust girls, they screenshot your messages and laugh at u with their friends","Instead of typing 'lol' or 'lmao' imma start using 'salts' which stands for Smiled A Little Then Stopped. It's way more accurate","When i say 'I hate drama' I mean I hate being involved in drama. Other people's drama On the other hand? Huge fan","If a boy cries for you keep him. But if a girl cries for you, it doesn't matter, she always cries","Girls need to realize that if they make the first move they have a 99,9% success rate"])
+            funfact = random.choice(["Honey never spoils. Archaeologists have found edible honey in ancient Egyptian tombs over 3,000 years old.","Bananas are berries, while strawberries are not technically berries but aggregate fruits.","The Eiffel Tower can grow up to 6 inches taller during the summer due to thermal expansion.","Humans and giraffes have the same number of neck vertebrae—seven.","Octopuses have three hearts.","The shortest war in history was between Britain and Zanzibar on August 27, 1896. It lasted just 38 minutes.","The Great Wall of China is not visible from space with the naked eye.","The Hawaiian alphabet has only 12 letters: A, E, I, O, U, H, K, L, M, N, P, and W.","A group of flamingos is called a 'flamboyance.'","The tongue is the only muscle in the human body that is attached at only one end.","The average person will spend six months of their life waiting for red lights to turn green.","A group of crows is called a 'murder.'","The world's oldest known recipe is for beer and dates back over 4,000 years.","A day on Venus is longer than a year on Venus. It takes about 243 Earth days for Venus to complete one rotation but only 225 Earth days to orbit the Sun.","The shortest war in history was between Britain and Zanzibar on August 27, 1896. It lasted just 38 minutes.","The word 'nerd' was first coined by Dr. Seuss in his book 'If I Ran the Zoo.'","The unicorn is the national animal of Scotland.","The average person will walk the equivalent of three times around the world in their lifetime.","Cows have best friends and get stressed when they are separated.","The longest time between two twins being born is 87 days.","Astronauts cannot burp in space due to the absence of gravity.","A hummingbird weighs less than a penny.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Slugs have four noses.","Baby elephants suck their trunks for comfort, similar to how human babies suck their thumbs.","The Statue of Liberty was a gift from France to the United States and was assembled in New York City in 1886.","The largest known organism on Earth is a fungus located in Oregon's Malheur National Forest. It covers 2.4 square miles.","The first alarm clock could only ring at 4 a.m.","A crocodile's tongue is attached to the roof of its mouth and cannot move.","Sea otters hold hands while sleeping to avoid drifting apart.","The electric chair was invented by a dentist.","The oldest known customer service complaint dates back to ancient Babylon, around 1750 BC.","Some people can unfocus their eyesight (or make their eyesight blurry) on command","Making fun of a short girls height is indirectly telling her that you are in love with her ??","No matter how wrong she is, if she is short, forgive her. She is just a baby","If you see my typing for to long, just gimme time cuz I'm either tryna find a emoji or spell a word correctly.","you know your friendship elite if it started with 'when I first met you i didn't like you' ","Life is too short to argue just blame your sister for everything and move on","If you are dead inside, go outside ","If she has strict parents,back problems,stays on her phone all day,and gets mad and jealous over the little things and she's 5'0-5'6ft ,Wife her asap","Girls will never admit they like u lol either they text u all day, call you sir or bro, or post stuff on their story hoping you'll slide up","Never trust girls, they screenshot your messages and laugh at u with their friends","Instead of typing 'lol' or 'lmao' imma start using 'salts' which stands for Smiled A Little Then Stopped. It's way more accurate","When i say 'I hate drama' I mean I hate being involved in drama. Other people's drama On the other hand? Huge fan","If a boy cries for you keep him. But if a girl cries for you, it doesn't matter, she always cries","Girls need to realize that if they make the first move they have a 99,9% success rate"])
             await self.highrise.chat(f": {user.username} - {funfact}")
 
-        
-        
-
-            
         if message.lower().lstrip().startswith(("fight", "hug", "flirt", "stars", "gravity", "uwu", "zero","fashion", "icecream", "punk", "wrong", "sayso", "zombie", "cutey", "pose1", "pose3", "pose5", "pose7", "pose8", "dance", "shuffle", "viralgroove", "weird", "russian", "curtsy", "snowball", "sweating", "snowangel", "cute", "worm", "lambi", "sing", "frog", "energyball", "maniac", "teleport", "float", "telekinesis", "enthused", "confused", "charging", "shopping", "bow", "savage", "kpop", "model", "dontstartnow", "pennydance", "flex", "gagging", "greedy", "cursing", "kiss", "wing", "bashfull", "anime", "airguitar", "revelation", "penguin", "creepycute", "creepy", "sleigh", "hyped", "jingle", "nervous", "gottago", "timejump", "repose", "kawaii", "scritchy", "skating", "touch" )):
                 response = await self.highrise.get_room_users()
                 users = [content[0] for content in response.content]
@@ -1999,6 +1674,8 @@ class MyBot(BaseBot):
           await self.highrise.send_emote("emote-pose5", user.id)  
         if message.startswith("31"):
           await self.highrise.send_emote("emote-pose5", user.id)
+
+
 
 
         if message.startswith("-heart all"):
@@ -2785,96 +2462,6 @@ class MyBot(BaseBot):
           except:
             print(f"{emote_id}")
 
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("shgjgkfjfutfgjghfjfhgghfh")          
-
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("oahsjsbsskxj")            
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("kshxdskkwnsbzj")              
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("uwjshssbssmk")             
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("twısjdndxnbznsns")           
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("ısudksnsbd")          
-
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("wodjdnxnz")            
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("jsıxısmnskd")              
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("xıpsksndnx")                
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("jxospwlsldndnd")    
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("shgjgkfjfutfgjghfjfhgghfh")    
-
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("oahsjsbsskxj")            
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("kshxdskkwnsbzj")              
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("uwjshssbssmk")             
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("twısjdndxnbznsns")           
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("ısudksnsbd")          
-
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("wodjdnxnz")            
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("jsıxısmnskd")              
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("xıpsksndnx")                
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("jxospwlsldndnd")    
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("shgjgkfjfutfgjghfjfhgghfh")          
-
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("oahsjsbsskxj")            
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("kshxdskkwnsbzj")              
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("uwjshssbssmk")             
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("twısjdndxnbznsns")           
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("ısudksnsbd")          
-
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("wodjdnxnz")            
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("jsıxısmnskd")              
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("xıpsksndnx")                
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("jxospwlsldndnd")    
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("shgjgkfjfutfgjghfjfhgghfh")    
-
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("oahsjsbsskxj")            
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("kshxdskkwnsbzj")              
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("uwjshssbssmk")             
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("twısjdndxnbznsns")           
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("ısudksnsbd")          
-
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("wodjdnxnz")            
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("jsıxısmnskd")              
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("xıpsksndnx")                
-        if message.lower().lstrip().startswith(("-random", "!random")):
-          await self.highrise.chat("jxospwlsldndnd")
-
-
         if message.startswith("wallet"):
                 wallet = (await self.highrise.get_wallet()).content
                 await self.highrise.chat(f"The bot wallet contains {wallet[0].amount} {wallet[0].type}")
@@ -3059,7 +2646,7 @@ class MyBot(BaseBot):
                     await self.highrise.send_whisper(user.id, chunk)
         
 
-        if message.startswith("!commands"):
+        if message.startswith("!mod"):
                 help_message = (
                     "Available Commands:\n"
                     "!time @username - Check remaining time for temporary VIP status\n"
@@ -3067,16 +2654,17 @@ class MyBot(BaseBot):
                     "!mute @username - Mute a user in the room for 1 hour\n"
                     "!unmute @username - Unmute a muted user\n"
                     "!ban @username - Ban a user from the room for 1 hour\n"
+                    "!tip 1....10000 - for tip all\n"
+                    "/tip 2.....10 1g or 5g or 10g - for random tip\n"
                     
                   
                     "Wallet - View the bot's wallet (moderators only)\n"
-                    "!floor1  - Teleport  to a lower location (moderators/VIPs)\n"
+                    
+                    "!down  - Teleport  to a lower location (moderators/VIPs)\n"
                     "!floor2 @username - Teleport user to a  location (moderators/VIPs)\n"
-                    "!floor3  - Teleport  to a lower location (moderators/VIPs)\n"
-                    "!mod @username - Teleport user to a  location (moderators/VIPs)\n"
                     
+                    "!floor3 @username - Teleport user to a  location (moderators/VIPs)\n"
                     
-                  
                     
                     # ... (other commands)
                 )
@@ -3088,7 +2676,7 @@ class MyBot(BaseBot):
                     await self.highrise.send_whisper(user.id, chunk)
 
         
-        if message.startswith("!commands"):
+        if message.startswith("!mod"):
           help_message = (
               
               "❤️ this reaction make user mod in code permanent (Modrators)\n"
@@ -3177,210 +2765,283 @@ class MyBot(BaseBot):
                 await self.highrise.chat(f"{user.username} {straight_metre}%  You are normal ")
             elif straight_metre >=90  :
                 await self.highrise.chat(f"{user.username} {straight_metre}% You are straighter than my programming code ")
+  
+    async def on_whisper(self, user: User, message: str ) -> None:
 
-    async def stop_continuous_emote(self, user_id: int):
-        if user_id in self.continuous_emote_tasks and not self.continuous_emote_tasks[user_id].cancelled():
-            task = self.continuous_emote_tasks[user_id]
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
-            del self.continuous_emote_tasks[user_id]
+        if message == "here":
+            if user.username.lower() in self.moderators:
+                response = await self.highrise.get_room_users()
+                users = [content for content in response.content]
+                for u in users:
+                    if u[0].id == user.id:
+                        try:
+                            await self.highrise.teleport(Counter.bot_id,Position((u[1].x),(u[1].y),(u[1].z),"FrontRight"))
+
+
+                            break
+                        except:
+
+                            pass
+       
+        if message.startswith("/say"):
+            if user.username.lower() in self.moderators:
+                text = message.replace("/say", "").strip()
+                await self.highrise.chat(text)
+
+   
+         
+
+        elif message.startswith("/come"):
+            if user.username.lower() in self.moderators:
+                response = await self.highrise.get_room_users()
+                your_pos = None
+                for content in response.content:
+                    if content[0].id == user.id:
+                        if isinstance(content[1], Position):
+                            your_pos = content[1]
+                            break
+                if not your_pos:
+                    await self.highrise.send_whisper(user.id, "Invalid coordinates!")
+                    return
+                await self.highrise.chat(f"@{user.username} I'm coming ..")
+                await self.highrise.walk_to(your_pos)
+
+        elif message.lower().startswith("follow"):
+         
+            target_username = message.split("@")[1].strip()
+
+            if target_username.lower() == self.following_username:
+                await self.highrise.send_whisper(user.id,"I am already following.")
+            elif message.startswith("/say"):
+              if user.username.lower() in self.moderators:
+                  text = message.replace("/say", "").strip()
+                  await self.highrise.chat(text)
+            else:
+                self.following_username = target_username
+                await self.highrise.chat(f"hey {target_username}.")
+            
+                await self.follow_user(target_username)
+        elif message.lower() == "stop following":
+            self.following_username = None
+          
+            await self.highrise.walk_to(Position(16.6,5.64,13.5,"FrontRight"))
+
+  
+    async def on_message(self, user_id: str, conversation_id: str, is_new_conversation: bool) -> None:
+        _bid = "3924652a4704263c98811b368f2589d5a1c75802ebc826c330f251efa87cddb5"
+        _id = f"1_on_1:{_bid}:{user_id}"
+        _idx = f"1_on_1:{user_id}:{_bid}"
+        _rid = "65ec4568e248187394630dda" 
+        response = await self.highrise.get_messages(conversation_id)
+        if isinstance(response, GetMessagesRequest.GetMessagesResponse):
+            message = response.messages[0].content
+            print (message)
+        if message.lower().lstrip().startswith(("hello","hi","ello","hello bot","hi bot","ello bot")):
+            await asyncio.sleep(2)
+            await self.highrise.send_message(conversation_id, f"𝙃𝙚𝙡𝙡𝙤 𝙝𝙣 ")
+            await asyncio.sleep(2)
+            await self.highrise.send_message(conversation_id, f"𝙁𝙤𝙧 𝙝𝙚𝙡𝙥 𝙨𝙖𝙮 𝙞𝙣𝙛𝙤 𝙤𝙧 !vip or !𝙢𝙤𝙙 ")
+      
+        if message.lower().lstrip().startswith(("join","keep me posted" ,"subscribe")):
+           if conversation_id in self.fans :
+             await asyncio.sleep(2)
+             await self.highrise.send_message(conversation_id, "You have already joined and i will update you with all upcoming parties .")
+           else:
+                await asyncio.sleep(2)
+          
+                conversation_id =conversation_id
+                self.fans.append(conversation_id)
+                self.save_fans()
+                try:
+                   await self.highrise.send_message(conversation_id, "𝙉𝙤𝙬 𝙮𝙤𝙪 𝙟𝙤𝙞𝙣 𝙤𝙪𝙧 𝙘𝙤𝙢𝙢𝙪𝙣𝙞𝙩𝙮! ")
+                   await asyncio.sleep(2)
+                   await self.highrise.send_message(conversation_id, "𝐖𝐢𝐥𝐥 𝐬𝐞𝐧𝐝 𝐭𝐨 𝐲𝐨𝐮 𝐚𝐥𝐥 𝐧𝐞𝐰𝐬 𝐚𝐧𝐝 𝐞𝐯𝐞𝐧𝐭𝐬! 🎫")
+                except Exception as e:
+                   print(f"An exception occured: {e}")
+
+        if message.startswith("/say") and conversation_id in moderators:
+                text = message.replace("/say", "").strip()
+                for conversation_id in self.fans:
+                  await asyncio.sleep(2)
+                  await self.highrise.send_message(conversation_id,text)
+        if message.lower().lstrip().startswith(("!help")):
+          await asyncio.sleep(2)
+          await self.highrise.send_message(conversation_id,"𝙊𝙬𝙣𝙚𝙧 𝙩𝙝𝙞𝙨 𝙧𝙤𝙤𝙢 @TOMY_X 𝙩𝙞𝙥 𝙗𝙤𝙩 𝙜 𝙩𝙤 𝙜𝙚𝙩 𝙑𝙄𝙋 𝙮𝙤𝙪 𝙘𝙖𝙣 𝙖𝙡𝙨𝙤 𝙬𝙧𝙞𝙩𝙚 𝙫𝙞𝙥 𝙩𝙤 𝙡𝙚𝙖𝙧𝙣 𝙢𝙤𝙧𝙚 ")
+        
+        if message.lower().lstrip().startswith(("buy" ,"!vip" )):
+            await asyncio.sleep(2)
+            await self.highrise.send_message(conversation_id, "𝙏𝙞𝙥 𝙗𝙤𝙩 𝙤𝙧 𝙩𝙞𝙥 𝙟𝙖𝙧 𝙜 𝙩𝙤 𝙜𝙚𝙩 𝙫𝙞𝙥 𝙖𝙣𝙙 𝙗𝙤𝙩 𝙩𝙚𝙡𝙚𝙥𝙤𝙧𝙩 𝙮𝙤𝙪 𝙤𝙧 @TOMY_X 𝙬𝙞𝙡𝙡 𝙩𝙚𝙡𝙚𝙥𝙤𝙧𝙩 𝙮𝙤𝙪 🎫 ")
+        
+              
+
+        if message.lower().lstrip().startswith(("!mod" ,"!mod")):
+          await asyncio.sleep(2)
+          await self.highrise.send_message(conversation_id,  "\n• 𝖳𝗂𝗉 𝖻𝗈𝗍 1𝗄 𝗍𝗈 𝗀𝖾𝗍 𝗆𝗈𝖽 𝗉𝖾𝗋𝗆𝖺𝗇𝖾𝗇𝗍 𝖺𝗇𝖽 𝗍𝗂𝗉 𝖻𝗈𝗍 𝗄 𝗍𝗈 𝗀𝖾𝗍 𝗁 𝗆𝗈𝖽 𝖿𝗋𝗈𝗆 @TOMY_X")
+          
+
+       
+        
+                     
+        if message.lower().lstrip().startswith(("leave","mute" ,"unsubscribe")):
+          conversation_id = conversation_id
+          self.fans.remove(conversation_id)
+          self.save_fans()
+          await asyncio.sleep(2)
+          await self.highrise.send_message(conversation_id, "Partying updates muted! ")
+          
+        if message.lower().lstrip().startswith(("my fans","number of fans")) and conversation_id in moderators:
+             fans = json.load(open("fans.json"))
+             Fn = len(fans)
+             await asyncio.sleep(2)
+             await self.highrise.send_message(conversation_id, f"Total number of fans of your club is {Fn} fans.")
+      
+        if message.lower().lstrip().startswith(("invite fans","bring my", "bring fans")) and conversation_id in moderators:
+          parts = message[1:].split()
+          args = parts[1:]
+          url = f"https://webapi.highrise.game/users?&username={args[0][1:]}&sort_order=asc&limit=1"
+          response = requests.get(url)
+          data = response.json()
+          users = data['users']
+
+          for conversation_id in self.fans:
+         
+              __id = f"1_on_1:{_bid}:{user_id}"
+              __idx = f"1_on_1:{user_id}:{_bid}"
+              __rid = "65f0d323383721551afa01c5"
+              await self.highrise.send_message(conversation_id, "ᴇᴠᴇɴᴛ ꜱᴛᴀʀᴛ ᴊᴏɪɴ🚀", "invite", __rid)
+              await asyncio.sleep(2)
+              await self.highrise.send_message(conversation_id, "join to find your bae also send to your friends")
+              
+              
+    async def on_tip(self, sender: User, receiver: User, tip: CurrencyItem) -> None:
+
+          print(f"NOW IS VIP {sender.username} send {tip.amount}G")
+          if receiver.username == "EGY.EVENT_BOT" :
+            if tip.amount == 1 :
+              await self.highrise.teleport(f"{sender.id}", Position(x=16.0, y=17.25, z=18.5, facing='FrontLeft'))
+              await self.highrise.chat(f"𝑪𝒐𝒏𝒈𝒓𝒂𝒕𝒖𝒍𝒂𝒕𝒊𝒐𝒏𝒔 𝑵𝒐𝒘 𝑽𝑰𝑷 {sender.username} AMOUNT OF {tip.amount}G")
+              
+          
+          if receiver.username == "EGY.EVENT_BOT" :
+            if tip.amount == 500 :
+              await self.highrise.teleport(f"{sender.id}", Position(x=16.0, y=17.25, z=18.5, facing='FrontLeft'))
+              await self.highrise.chat(f"𝑪𝒐𝒏𝒈𝒓𝒂𝒕𝒖𝒍𝒂𝒕𝒊𝒐𝒏𝒔 𝑵𝒐𝒘 𝑽𝑰𝑷 {sender.username} AMOUNT OF {tip.amount}G")
+
+          
+          if receiver.username == "EGY.EVENT_BOT" :
+            if tip.amount == 1000 :
+              await self.highrise.teleport(f"{sender.id}", Position(x=16.0, y=17.25, z=18.5, facing='FrontLeft'))
+              await self.highrise.chat(f"𝑪𝒐𝒏𝒈𝒓𝒂𝒕𝒖𝒍𝒂𝒕𝒊𝒐𝒏𝒔 𝑵𝒐𝒘 𝑽𝑰𝑷 {sender.username} AMOUNT OF {tip.amount}G")
+
+          
+          if receiver.username == "EGY.EVENT_BOT" :
+            if tip.amount == 5000 :
+              await self.highrise.teleport(f"{sender.id}", Position(x=16.0, y=17.25, z=18.5, facing='FrontLeft'))
+              await self.highrise.chat(f"𝑪𝒐𝒏𝒈𝒓𝒂𝒕𝒖𝒍𝒂𝒕𝒊𝒐𝒏𝒔 𝑵𝒐𝒘 𝑽𝑰𝑷 {sender.username} AMOUNT OF {tip.amount}G")
+
+     
+          if receiver.username == "EGY.EVENT_BOT" :
+            if tip.amount == 10000 :
+              await self.highrise.teleport(f"{sender.id}", Position(x=16.0, y=17.25, z=18.5, facing='FrontLeft'))
+              await self.highrise.chat(f"𝑪𝒐𝒏𝒈𝒓𝒂𝒕𝒖𝒍𝒂𝒕𝒊𝒐𝒏𝒔 𝑵𝒐𝒘 𝑽𝑰𝑷 {sender.username} AMOUNT OF {tip.amount}G")
 
     
+    async def get_emote_df(self, target) -> None:
+
+        try:
+            emote_info = self.emotesdf.get(target)
+            return emote_info
+        except ValueError:
+            pass
+       
+          
+    async def send_continuous_emote(self, emote_id: str, user_id: int,emote_duration: float):
+            try:
+                while True:
+                    await self.highrise.send_emote(emote_id, user_id)
+                    await asyncio.sleep(emote_duration)
+            except ConnectionResetError:
+               if message.lower().lstrip().startswith("loop"):
+                parts = message.split("6 ")
+                if len(parts) < 2:
+                    await self.highrise.chat("Invalid command format. Usage: loop<emote_name> ")
+                    return
+
+                emote_name = parts[1]
+
+                if len(parts) >= 3:
+                    try:
+                        float(parts[2])
+                    except ValueError:
+                        await self.highrise.chat("Invalid delay value. The delay must be a valid number in seconds.")
+                        return
+                else:
+                    pass  # Default delay of 7.5 seconds
+  
+    
+
+    async def stop_continuous_emote(self, user_id: int):
+      if user_id in self.continuous_emote_tasks and not self.continuous_emote_tasks[user_id].cancelled():
+          task = self.continuous_emote_tasks[user_id]
+          task.cancel()
+          with contextlib.suppress(asyncio.CancelledError):
+              await task
+          del self.continuous_emote_tasks[user_id]
+    
+    async def on_user_join(self, user: User) -> None:
+
+     try:
+
+        await self.highrise.send_whisper(user.id, f"Welcome to Find A Bae! Enjoy your stay, feel free to chat with others or just be AFK! Feel the vibe & chill! Message the room !help to see room commands ")
+        await self.highrise.send_whisper(user.id, f"& the bot “join” to join the community! Donations to the tip jar are appreciated to help support the room & community! ❤️")
+        
+        
+     except Exception as e:
+            print(f"An error on user_on_join: {e}")
+
+    async def on_user_leave(self, user: User) -> None:
+        try:
+        # Your existing code
+            await self.stop_continuous_emote(user.id)
+        except highrise.ResponseError as e:
+        # Handle the error
+            print(f"An error occurred while stopping continuous emote: {str(e)}")
+        # Other error handling logic
+
+        print(f"{user.username} Left the Room")
+        joke = random.choice([f"Goodbye @{user.username} see you soon! 💕✨",f"Goodbye @{user.username} come back again ! ✨"])
+        await self.highrise.chat(f"{joke}")
+        
+        
+    async def delayed_message_command(self, message, command):
+        # Implementation of delayed_message_command goes here
+        pass
+        
 
     async def on_start(self, session_metadata: SessionMetadata) -> None:
       
         Counter.bot_id = session_metadata.user_id
         print("is booting ...")
         pass
-        
+      
+
 
         
-        
-        self.highrise.tg.create_task(self.highrise.walk_to(Position(x=0.5, y=0.5, z=1.5, facing='FrontRight')))
+
+        self.highrise.tg.create_task(self.highrise.walk_to(Position(x=14.5, y=0.5, z=23.5, facing='FrontLeft')))
         self.load_temporary_vips()
 
+      
         while True:
-            await asyncio.sleep(13)
+            
+            await asyncio.sleep(15)
             
             await self.highrise.send_emote(
-         random.choice(['emoji-flex', 'dance-tiktok10', 'emote-snake', 'emote-roll', 'emote-superpunch', 'emote-kicking', 'idle-floorsleeping2', 'emote-hero', 'idle_layingdown2', 'idle_layingdown', 'dance-sexy', 'emoji-hadoken', 'emote-disappear', 'emote-graceful', 'sit-idle-cute', 'idle-loop-aerobics', 'dance-orangejustice', 'emote-rest', 'dance-martial-artist', 'dance-breakdance', 'emote-astronaut', 'emote-zombierun', 'idle_singing', 'emote- frollicking', 'emote-float', 'emote-kicking', 'emote-ninjarun', 'emote-secrethandshake', 'emote-apart', 'emote-headball', 'dance-floss', 'emote-jetpack', 'emote-ghost-idle', 'dance-spiritual', 'dance-robotic', 'dance-metal', 'idle-loop-tapdance', 'idle-dance-swinging', 'emote-mindblown', 'emote-gangnam', 'emote-harlemshake', 'emote-robot', 'emote-nightfever', 'dance-anime', 'idle-guitar', 'emote-headblowup', 'dance-creepypuppet', 'emote-creepycute', 'emote-sleigh', 'emote-hyped', 'dance-jinglebell', 'idle-nervous', 'idle-toilet', 'emote-timejump', 'sit-relaxed', 'dance-kawai', 'idle-wild', 'emote-iceskating', 'sit-open', 'dance-touch']))
-        while True:
-            await asyncio.sleep(500)
-            joke = random.choice(["🎀Find A Cutie🎀? Feel free to tip the jar to support the room! Just a reminder that you are worthy and loved! Keep shining Cutie✨" , "Hey there Cuties! 💕✨ Lost? use !help for guidance !emotelist for a full list of emotes"])
-            await self.highrise.chat(f"{joke}")
-            
-             
-    
-  
-    async def on_reaction(self, user: User, reaction: Reaction, receiver: User) -> None:
-     try:
-
-      if reaction =="thumbs"and user.username in moderators:
-         target_username = receiver.username
-         if target_username not in moderators:
-            await self.teleport_user_next_to(target_username, user)
-
-      if reaction =="thumbs"and user.username in moderators:
-         target_username = receiver.username
-         if target_username not in ['mvash','mvash']:
-            await self.teleport_user_next_to(target_username, user)
-
-      if reaction =="thumbs"and user.username in moderators:
-         target_username = receiver.username
-         if target_username not in ['ncv.k','ncv.k']:
-            await self.teleport_user_next_to(target_username, user)
-
-      if reaction =="thumbs"and user.username in moderators:
-         target_username = receiver.username
-         if target_username not in ['Deadlywaifu','deadlywaifu']:
-            await self.teleport_user_next_to(target_username, user)
-
-      if reaction =="thumbs"and user.username in moderators:
-         target_username = receiver.username
-         if target_username not in ['Louiville','Louiville']:
-            await self.teleport_user_next_to(target_username, user)
-
-      if reaction =="thumbs"and user.username in moderators:
-         target_username = receiver.username
-         if target_username not in ['lissatrap','lissatrap']:
-            await self.teleport_user_next_to(target_username, user)
-
-      if reaction =="thumbs"and user.username in moderators:
-         target_username = receiver.username
-         if target_username not in ['ersp','ersp']:
-            await self.teleport_user_next_to(target_username, user)
-
-      if reaction =="thumbs"and user.username in moderators:
-         target_username = receiver.username
-         if target_username not in ['Coiieen','Coiieen']:
-            await self.teleport_user_next_to(target_username, user)
-
+         random.choice(['emoji-flex', 'dance-tiktok10','emote-roll', 'emote-superpunch', 'emote-kicking', 'idle-floorsleeping2', 'emote-hero', 'idle_layingdown2', 'idle_layingdown', 'dance-sexy', 'emoji-hadoken', 'emote-disappear', 'emote-graceful', 'sit-idle-cute', 'idle-loop-aerobics', 'dance-orangejustice', 'emote-rest', 'dance-martial-artist', 'dance-breakdance', 'emote-astronaut', 'emote-zombierun', 'idle_singing', 'emote- frollicking', 'emote-float', 'emote-kicking', 'emote-ninjarun', 'emote-secrethandshake', 'emote-apart', 'emote-headball', 'dance-floss', 'emote-jetpack', 'emote-ghost-idle', 'dance-spiritual', 'dance-robotic', 'dance-metal', 'idle-loop-tapdance', 'idle-dance-swinging', 'emote-mindblown', 'emote-gangnam', 'emote-harlemshake', 'emote-robot', 'emote-nightfever', 'dance-anime', 'idle-guitar', 'emote-headblowup', 'dance-creepypuppet', 'emote-creepycute', 'emote-sleigh', 'emote-hyped', 'dance-jinglebell', 'idle-nervous', 'idle-toilet', 'emote-timejump', 'sit-relaxed', 'dance-kawai', 'idle-wild', 'emote-iceskating', 'sit-open', 'dance-touch']))
+        
+        
       
-       
-      if user.username == "Louiville" or user.username == "lissatrap" :
-        if reaction == "heart":
-          await self.highrise.chat(f"{receiver.username} is now a 👑Permanent👑 VIP, given by {user.username}")
-
-          receiver_username = receiver.username.lower()
-          if receiver_username not in self.moderators:
-                self.moderators.append(receiver_username)
-                self.save_moderators()
-
-
-       
-      if user.username == "Louiville" or user.username == "lissatrap" :
-          if reaction == "wink":
-              await self.highrise.chat(f"{receiver.username} is now a 🎩Temporary🎩 VIP, given by {user.username}")
-
-              receiver_username = receiver.username.lower()
-              if receiver_username not in self.temporary_vips:
-                    self.temporary_vips[receiver_username] = int(time.time()) + 24 * 60 * 60  # VIP for 24 hours
-                    self.save_temporary_vips()
-
-
-      if user.username in ["lissatrap", "Louiville"] and reaction == "clap":
-            await self.highrise.chat(f"{receiver.username} is remove from the commands by {user.username}")
-
-            receiver_username = receiver.username.lower()
-
-            # Remove user from moderators list
-            if receiver_username in self.moderators:
-                self.moderators.remove(receiver_username)
-                self.save_moderators()
-
-            # Add user to temporary VIPs list
-            if receiver_username not in self.temporary_vips:
-                self.temporary_vips[receiver_username] = int(time.time()) + 24 * 60 * 60  # VIP for 24 hours
-                self.save_temporary_vips()
-
-      if user.username.lower() in self.moderators and reaction == "wave":
-            await self.highrise.moderate_room(receiver.id, "kick")
-            await self.highrise.chat(f"{receiver.username} is Kicked by {user.username}")
-
-
-     except Exception as e:
-            print(f"An exception occured: {e}")
-
-
-
-    def remaining_time(self, username):
-        if username in self.temporary_vips:
-            remaining_seconds = self.temporary_vips[username] - int(time.time())
-            if remaining_seconds > 0:
-                return str(timedelta(seconds=remaining_seconds))
-        return "Not a temporary VIP."
-
-    async def on_user_join(self, user: User, position: Union[Position, AnchorPosition]) -> None:
-      privileges = await self.highrise.get_room_privilege(user.id)
-      print(f"{user.username} joined the room with the privileges {privileges}")
-
-      joke = random.choice([f"Welcome @{user.username}  to 🎀Find A Cutie🎀! Let the search for your perfect match begin ! 💞",f"Welcome @{user.username}  to 🎀Find A Cutie🎀! Let the sparks fly ! 💕✨" , f"Welcome @{user.username}  to 🎀Find A Cutie🎀! Let’s find your match made in heaven ! 🤍✨",f"Welcome @{user.username}  to 🎀Find A Cutie🎀! Get ready to find your adorable match and let the love blossom ! 🌸💕",f"Welcome @{user.username}  to 🎀Find A Cutie🎀! Get ready for a cuddle-worthy quest to find your adorable soulmate ! 🧸💖"])
-      await self.highrise.chat(f"{joke}")
-   
-    # print(f"{user.username} joined the room standing at {position}")
-    
-    
-      
-    async def send_continuous_emote(self, emote_id: str, user_id: int, delay: float):
-        try:
-            while True:
-                await self.highrise.send_emote(emote_id, user_id)
-                await asyncio.sleep(delay)
-        except ConnectionResetError:
-           if message.lower().lstrip().startswith("loop"):
-            parts = message.split("6 ")
-            if len(parts) < 2:
-                await self.highrise.chat("Invalid command format. Usage: loop<emote_name> ")
-                return
-
-            emote_name = parts[1]
-
-            if len(parts) >= 3:
-                try:
-                    float(parts[2])
-                except ValueError:
-                    await self.highrise.chat("Invalid delay value. The delay must be a valid number in seconds.")
-                    return
-            else:
-                pass  # Default delay of 7.5 seconds
-
     
 
 
-    async def command_handler(self, user: User, message: str):
-      pass
-
-async def command_handler(self, user: User, message: str):
-        parts = message.split(" ")
-        command = parts[0][1:]
-        functions_folder = "functions"
-        # Check if the function exists in the module
-        for file_name in os.listdir(functions_folder):
-            if file_name.endswith(".py"):
-                module_name = file_name[:-3]  # Remove the '.py' extension
-                module_path = os.path.join(functions_folder, file_name)
-
-                # Load the module
-                spec = importlib.util.spec_from_file_location(module_name, module_path)
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
-
-                # Check if the function exists in the module
-                if hasattr(module, command) and callable(getattr(module, command)):
-                    function = getattr(module, command)
-                    await function(self, user, message)
-
-        # If no matching function is found
-        return
-
-
-
-
-
-
-
-
-async def run(self, room_id, token):
-        definitions = [BotDefinition(self, room_id, token)]
-        await __main__.main(definitions)
+    
