@@ -2988,16 +2988,11 @@ class Bot(BaseBot):
               await task
           del self.continuous_emote_tasks[user_id]
     
-    async def on_user_join(self, user: User) -> None:
+   
 
-     try:
-
-        await self.highrise.send_whisper(user.id, f"Welcome to Find A Bae! Enjoy your stay, feel free to chat with others or just be AFK! Feel the vibe & chill! Message the room !help to see room commands ")
-        await self.highrise.send_whisper(user.id, f"& the bot “join” to join the community! Donations to the tip jar are appreciated to help support the room & community! ❤️")
         
         
-     except Exception as e:
-            print(f"An error on user_on_join: {e}")
+
 
     async def on_user_leave(self, user: User) -> None:
         try:
@@ -3039,9 +3034,9 @@ class Bot(BaseBot):
             await self.highrise.send_emote(
          random.choice(['emoji-flex', 'dance-tiktok10','emote-roll', 'emote-superpunch', 'emote-kicking', 'idle-floorsleeping2', 'emote-hero', 'idle_layingdown2', 'idle_layingdown', 'dance-sexy', 'emoji-hadoken', 'emote-disappear', 'emote-graceful', 'sit-idle-cute', 'idle-loop-aerobics', 'dance-orangejustice', 'emote-rest', 'dance-martial-artist', 'dance-breakdance', 'emote-astronaut', 'emote-zombierun', 'idle_singing', 'emote- frollicking', 'emote-float', 'emote-kicking', 'emote-ninjarun', 'emote-secrethandshake', 'emote-apart', 'emote-headball', 'dance-floss', 'emote-jetpack', 'emote-ghost-idle', 'dance-spiritual', 'dance-robotic', 'dance-metal', 'idle-loop-tapdance', 'idle-dance-swinging', 'emote-mindblown', 'emote-gangnam', 'emote-harlemshake', 'emote-robot', 'emote-nightfever', 'dance-anime', 'idle-guitar', 'emote-headblowup', 'dance-creepypuppet', 'emote-creepycute', 'emote-sleigh', 'emote-hyped', 'dance-jinglebell', 'idle-nervous', 'idle-toilet', 'emote-timejump', 'sit-relaxed', 'dance-kawai', 'idle-wild', 'emote-iceskating', 'sit-open', 'dance-touch']))
         
-        
-      
-    
-
+        while True:
+            await asyncio.sleep(180)
+            await self.highrise.chat(f"Welcome to Find A Bae! Enjoy your stay, feel free to chat with others or just be AFK! Feel the vibe & chill! Message the room !help to see room commands ")
+            await self.highrise.chat(f"& the bot “join” to join the community! Donations to the tip jar are appreciated to help support the room & community! ❤️ ")
 
     
